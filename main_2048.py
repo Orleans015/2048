@@ -46,7 +46,7 @@ def add_new_tile(board):
     board[i, j] = 2 if random.random() < 0.9 else 4
   return board
 
-def my_move(board, direction):
+def move(board, direction):
   """
   Move all the tiles in the given direction until they reach a border or
   another tile they cannot merge with.
@@ -60,6 +60,7 @@ def my_move(board, direction):
         if board[j, i] == board[j + 1, i]:
           board[j, i] *= 2
           board[j + 1, i] = EMPTY
+      board[:, i] = np.concatenate((board[board[:, i] != EMPTY, i], np.zeros(board[board[:, i] == EMPTY, i].shape)))
   elif direction == DOWN:
     for i in range(SIZE):
       # remove the zeros and put them at the beginning of the column
@@ -69,6 +70,7 @@ def my_move(board, direction):
         if board[j, i] == board[j - 1, i]:
           board[j, i] *= 2
           board[j - 1, i] = EMPTY
+      board[:, i] = np.concatenate((np.zeros(board[board[:, i] == EMPTY, i].shape), board[board[:, i] != EMPTY, i]))
   elif direction == LEFT:
     for i in range(SIZE):
       # remove the zeros and put them at the end of the row
@@ -78,6 +80,7 @@ def my_move(board, direction):
         if board[i, j] == board[i, j + 1]:
           board[i, j] *= 2
           board[i, j + 1] = EMPTY
+      board[i, :] = np.concatenate((board[i, board[i, :] != EMPTY], np.zeros(board[i, board[i, :] == EMPTY].shape)))
   elif direction == RIGHT:
     for i in range(SIZE):
       # remove the zeros and put them at the beginning of the row
@@ -87,53 +90,7 @@ def my_move(board, direction):
         if board[i, j] == board[i, j - 1]:
           board[i, j] *= 2
           board[i, j - 1] = EMPTY
-  return board
-
-def move(board, direction):
-  """
-  Move all the tiles in the given direction until they reach a border or 
-  another tile they cannot merge with.
-  """
-  if direction == UP:
-    for j in range(SIZE):
-      for i in range(1, SIZE):
-        if board[i, j] != EMPTY:
-          k = i
-          while k > 0 and board[k - 1, j] == EMPTY:
-            k -= 1
-          if k > 0 and board[k - 1, j] == board[i, j]:
-            board[k - 1, j] *= 2
-            board[i, j] = EMPTY
-  elif direction == DOWN:
-    for j in range(SIZE):
-      for i in range(SIZE - 2, -1, -1):
-        if board[i, j] != EMPTY:
-          k = i
-          while k < SIZE - 1 and board[k + 1, j] == EMPTY:
-            k += 1
-          if k < SIZE - 1 and board[k + 1, j] == board[i, j]:
-            board[k + 1, j] *= 2
-            board[i, j] = EMPTY
-  elif direction == LEFT:
-    for i in range(SIZE):
-      for j in range(1, SIZE):
-        if board[i, j] != EMPTY:
-          k = j
-          while k > 0 and board[i, k - 1] == EMPTY:
-            k -= 1
-          if k > 0 and board[i, k - 1] == board[i, j]:
-            board[i, k - 1] *= 2
-            board[i, j] = EMPTY
-  elif direction == RIGHT:
-    for i in range(SIZE):
-      for j in range(SIZE - 2, -1, -1):
-        if board[i, j] != EMPTY:
-          k = j
-          while k < SIZE - 1 and board[i, k + 1] == EMPTY:
-            k += 1
-          if k < SIZE - 1 and board[i, k + 1] == board[i, j]:
-            board[i, k + 1] *= 2
-            board[i, j] = EMPTY
+      board[i, :] = np.concatenate((np.zeros(board[i, board[i, :] == EMPTY].shape), board[i, board[i, :] != EMPTY]))
   return board
 
 def is_game_over(board):
@@ -181,9 +138,20 @@ def main():
       break
     
     while np.array_equal(board, new_board):
-      direction = int(input('Enter direction (1: up, 2: down, 3: left, 4: right): '))
+      try:
+        direction = int(input('Enter direction (1: up, 2: down, 3: left, 4: right, 0: save & exit): '))
+        if direction == 0:
+          print('Saving game status!')
+          # if the saved_games directory does not exist, create it
+          if not os.path.exists('saved_games'):
+            os.makedirs('saved_games')
+          np.save(f'saved_games/board_{time.time()}.npy', board)
+          sys.exit()
+      except ValueError:
+          print('Invalid direction!')
+          continue
       if direction in [UP, DOWN, LEFT, RIGHT]:
-        board = my_move(board, direction)
+        board = move(board, direction)
       else:
         print('Invalid direction!')
   
